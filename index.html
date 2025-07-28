@@ -27,8 +27,9 @@
     <div id="a1-value"></div> 
 
     <script>
-        const API_KEY = 'YOUR_API_KEY'; // ここに取得したAPIキーを貼り付ける
-        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // ここに取得したスプレッドシートIDを貼り付ける
+        // あなたのAPIキーとスプレッドシートIDをここに設定
+        const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU';
+        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA';
         const RANGE = 'A1'; // A1セルの値を取得
 
         const a1ValueElement = document.getElementById('a1-value');
@@ -44,10 +45,11 @@
                 return response.json();
             })
             .then(data => {
+                // データが取得できたら表示
                 if (data.values && data.values.length > 0 && data.values[0].length > 0) {
                     a1ValueElement.textContent = data.values[0][0];
                 } else {
-                    // A1セルに値がない場合もエラーとみなして「Coming Soon」にする
+                    // A1セルに値がない場合も「Coming Soon」にする
                     a1ValueElement.textContent = 'Coming Soon';
                 }
             })
