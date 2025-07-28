@@ -1,111 +1,146 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Google スプレッドシート 動的表示 - デバッグ</title>
+    <title>シートデータ表示テスト</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            font-family: sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh; /* 高さの指定をmin-heightに変更 */
             margin: 0;
-            background-color: #f0f0f0;
+            background-color: #f4f7f6;
             color: #333;
-            font-size: 2em;
-        }
-        #a1-value {
+            font-size: 1.5em;
+            text-align: center;
             padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-sizing: border-box; /* paddingで要素がはみ出さないように */
+        }
+        #display-area {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 800px;
+            word-wrap: break-word; /* 長い単語がはみ出さないように */
+            min-width: 300px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .loading {
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div id="a1-value"></div> 
+    <div id="display-area" class="loading">データを読み込み中...</div>
 
     <script>
-        const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU';
-        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA'; 
-        const RANGE = 'A:B'; 
+        // 設定値
+        const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU'; // あなたのAPIキーに置き換えてください
+        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA'; // あなたのスプレッドシートIDに置き換えてください
+        const RANGE = 'A:B'; // 取得する範囲（例: 'シート1!A:B' も可能）
 
+        // URLパラメータからCMSアイテム識別子を取得
         const urlParams = new URLSearchParams(window.location.search);
-        const CMS_ITEM_IDENTIFIER = urlParams.get('itemId'); 
+        const cmsItemIdentifier = urlParams.get('itemId'); // 'itemId'パラメータから取得
 
-        const a1ValueElement = document.getElementById('a1-value');
-        
-        if (!CMS_ITEM_IDENTIFIER) {
-            a1ValueElement.textContent = 'アイテム識別子が指定されていません。';
-            console.error('Error: CMS Item Identifier not provided in URL parameters.');
-            return;
+        const displayArea = document.getElementById('display-area');
+
+        // ==== 関数定義: エラー表示ヘルパー ====
+        function showError(message) {
+            displayArea.className = 'error'; // エラー用のCSSクラスを設定
+            displayArea.textContent = `エラー: ${message}`;
+            console.error(`カスタムエラー: ${message}`);
         }
 
-        a1ValueElement.textContent = '読み込み中...'; 
+        // ==== 関数定義: メインのデータ取得・表示ロジック ====
+        async function fetchDataAndDisplay() {
+            // CMSアイテム識別子がない場合のチェック
+            if (!cmsItemIdentifier) {
+                showError('URLにアイテム識別子 (itemId) が指定されていません。例: ?itemId=item-page-1');
+                return; // ここでのreturnは関数内なので問題なし
+            }
 
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+            // APIリクエストURLの構築
+            const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+            console.log("APIリクエストURL:", apiUrl); // デバッグ用
 
-        fetch(url)
-            .then(response => {
+            try {
+                // APIからのデータ取得
+                const response = await fetch(apiUrl);
+
+                // HTTPエラーチェック
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTPエラー ${response.status}: ${errorText}`);
                 }
-                return response.json();
-            })
-            .then(data => {
-                const rows = data.values;
-                
-                // ★デバッグログ追加: APIから取得した全データを確認
-                console.log("APIから取得した全データ (rows):", rows);
 
-                if (!rows || rows.length <= 1) { 
-                    a1ValueElement.textContent = 'Coming Soon';
-                    return;
+                const data = await response.json();
+                console.log("APIレスポンスデータ:", data); // デバッグ用
+
+                const rows = data.values;
+
+                // スプレッドシートにデータが存在しない、またはヘッダー行しかない場合
+                if (!rows || rows.length <= 1) {
+                    displayArea.className = ''; // クラスをリセット
+                    displayArea.textContent = 'Coming Soon';
+                    return; // ここでのreturnは関数内なので問題なし
                 }
 
                 const headerRow = rows[0];
-                
-                // ★デバッグログ追加: ヘッダー行とCMS_ITEM_IDENTIFIERを確認
-                console.log("ヘッダー行 (headerRow):", headerRow);
-                console.log("検索するCMS_ITEM_IDENTIFIER:", CMS_ITEM_IDENTIFIER);
+                console.log("ヘッダー行:", headerRow); // デバッグ用
 
+                // ヘッダーから必要な列のインデックスを探す
                 const identifierColIndex = headerRow.findIndex(col => col.trim().toUpperCase() === 'CMS_ITEM_ID');
                 const displayValueColIndex = headerRow.findIndex(col => col.trim().toUpperCase() === 'DISPLAY_VALUE');
 
-                // ★デバッグログ追加: 特定された列インデックスを確認
-                console.log("CMS_ITEM_IDの列インデックス:", identifierColIndex);
-                console.log("DISPLAY_VALUEの列インデックス:", displayValueColIndex);
+                console.log("CMS_ITEM_ID列インデックス:", identifierColIndex); // デバッグ用
+                console.log("DISPLAY_VALUE列インデックス:", displayValueColIndex); // デバッグ用
 
-
+                // 必須列が見つからない場合
                 if (identifierColIndex === -1 || displayValueColIndex === -1) {
-                    a1ValueElement.textContent = 'スプレッドシートの列名が不正です。';
-                    console.error('Error: Required column names (CMS_ITEM_ID or DISPLAY_VALUE) not found.');
-                    return;
+                    showError('スプレッドシートに必要な列名（CMS_ITEM_IDまたはDISPLAY_VALUE）が見つかりません。スペルミスや大文字小文字を確認してください。');
+                    return; // ここでのreturnは関数内なので問題なし
                 }
 
+                // CMSアイテム識別子に一致する行を探す（ヘッダー行を除く）
+                // trim()で空白を除去し、大文字小文字を区別しない検索に修正 (念のため)
+                const targetIdentifier = cmsItemIdentifier.trim().toLowerCase(); 
                 const foundRow = rows.slice(1).find(row => {
-                    // ★デバッグログ追加: 各行の識別子列の値とCMS_ITEM_IDENTIFIERを比較
-                    const rowIdentifier = row[identifierColIndex];
-                    console.log(`比較中: 行の識別子 '${rowIdentifier}' と検索値 '${CMS_ITEM_IDENTIFIER}'`);
-                    return rowIdentifier === CMS_ITEM_IDENTIFIER;
+                    // 行のセルが存在するかチェックしてからtrim/toLowerCaseを適用
+                    const rowIdentifierValue = row[identifierColIndex] ? String(row[identifierColIndex]).trim().toLowerCase() : '';
+                    console.log(`比較中: '${rowIdentifierValue}' == '${targetIdentifier}'`); // デバッグ用
+                    return rowIdentifierValue === targetIdentifier;
                 });
 
-                // ★デバッグログ追加: 見つかった行のデータを確認
-                console.log("見つかった行 (foundRow):", foundRow);
+                console.log("見つかった行:", foundRow); // デバッグ用
 
-                if (foundRow && foundRow[displayValueColIndex] !== undefined && foundRow[displayValueColIndex] !== '') {
-                    // 該当する行と表示値のセルが見つかり、かつ値が空でない場合
-                    a1ValueElement.textContent = foundRow[displayValueColIndex];
+                // 結果の表示
+                if (foundRow && foundRow[displayValueColIndex] !== undefined) {
+                    const displayValue = foundRow[displayValueColIndex].trim(); // 表示値の空白も除去
+                    displayArea.className = ''; // エラークラスをリセット
+                    displayArea.textContent = displayValue !== '' ? displayValue : 'データが空です。'; // 空の場合はメッセージ
                 } else {
-                    // 該当するアイテムが見つからない場合、または表示値が空の場合
-                    a1ValueElement.textContent = 'Coming Soon';
+                    displayArea.className = ''; // クラスをリセット
+                    displayArea.textContent = 'Coming Soon'; // 該当データが見つからない場合
                 }
-            })
-            .catch(error => {
-                console.error('データの取得に失敗しました:', error);
-                a1ValueElement.textContent = 'エラーが発生しました。'; 
-            });
+
+            } catch (error) {
+                // フェッチやJSONパース中のエラーをキャッチ
+                showError(`データの取得中にエラーが発生しました: ${error.message}`);
+                console.error("フェッチエラー詳細:", error);
+            }
+        }
+
+        // ページロード時にデータ取得関数を実行
+        fetchDataAndDisplay();
     </script>
 </body>
 </html>
