@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Google スプレッドシート A1セル表示 - パラメータテスト</title>
+    <title>Google スプレッドシート 動的表示</title>
     <style>
         body {
             font-family: sans-serif;
@@ -29,21 +29,23 @@
     <script>
         const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU';
         const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA'; 
-        const RANGE = 'A1';
+        // ★変更: スプレッドシートのA列からB列までを取得
+        const RANGE = 'A:B'; 
 
-        // ★追加・変更部分: URLパラメータからitemIdを取得
         const urlParams = new URLSearchParams(window.location.search);
-        const CMS_ITEM_IDENTIFIER = urlParams.get('itemId'); // 'itemId'というパラメータ名を想定
+        const CMS_ITEM_IDENTIFIER = urlParams.get('itemId'); 
 
         const a1ValueElement = document.getElementById('a1-value');
         
-        // ★追加・変更部分: CMS_ITEM_IDENTIFIERをA1セルの値と一緒に表示
-        if (CMS_ITEM_IDENTIFIER) {
-            a1ValueElement.textContent = `A1セル: Loading... (ID: ${CMS_ITEM_IDENTIFIER})`; // IDがあれば仮表示
-        } else {
-            a1ValueElement.textContent = `A1セル: Loading... (ID: なし)`; // IDがなければ仮表示
+        if (!CMS_ITEM_IDENTIFIER) {
+            a1ValueElement.textContent = 'アイテム識別子が指定されていません。';
+            console.error('Error: CMS Item Identifier not provided in URL parameters.');
+            return;
         }
-        
+
+        // 初期表示を「読み込み中...」にする（任意）
+        a1ValueElement.textContent = '読み込み中...'; 
+
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
         fetch(url)
@@ -54,17 +56,38 @@
                 return response.json();
             })
             .then(data => {
-                // ★変更部分: A1セルの値とIDを両方表示
-                if (data.values && data.values.length > 0 && data.values[0].length > 0) {
-                    const a1Value = data.values[0][0];
-                    a1ValueElement.textContent = `A1セル: ${a1Value} (ID: ${CMS_ITEM_IDENTIFIER || 'なし'})`;
+                const rows = data.values;
+                // データがない場合（ヘッダー行しかない場合も含む）
+                if (!rows || rows.length <= 1) { 
+                    a1ValueElement.textContent = 'Coming Soon';
+                    return;
+                }
+
+                // ★変更: ヘッダー行から「CMS_ITEM_ID」と「DISPLAY_VALUE」の列インデックスを探す
+                const headerRow = rows[0];
+                const identifierColIndex = headerRow.findIndex(col => col.trim().toUpperCase() === 'CMS_ITEM_ID');
+                const displayValueColIndex = headerRow.findIndex(col => col.trim().toUpperCase() === 'DISPLAY_VALUE');
+
+                if (identifierColIndex === -1 || displayValueColIndex === -1) {
+                    a1ValueElement.textContent = 'スプレッドシートの列名が不正です。';
+                    console.error('Error: Required column names (CMS_ITEM_ID or DISPLAY_VALUE) not found.');
+                    return;
+                }
+
+                // ★変更: CMS_ITEM_IDENTIFIERに一致する行を探す（ヘッダー行を除く）
+                const foundRow = rows.slice(1).find(row => row[identifierColIndex] === CMS_ITEM_IDENTIFIER);
+
+                if (foundRow && foundRow[displayValueColIndex] !== undefined) {
+                    // 該当する行と表示値のセルが見つかった場合
+                    a1ValueElement.textContent = foundRow[displayValueColIndex];
                 } else {
-                    a1ValueElement.textContent = `A1セルに値がありません。(ID: ${CMS_ITEM_IDENTIFIER || 'なし'})`;
+                    // 該当するアイテムが見つからない場合、または表示値が空の場合
+                    a1ValueElement.textContent = 'Coming Soon';
                 }
             })
             .catch(error => {
                 console.error('データの取得に失敗しました:', error);
-                a1ValueElement.textContent = `エラーが発生しました。(ID: ${CMS_ITEM_IDENTIFIER || 'なし'})`;
+                a1ValueElement.textContent = 'エラーが発生しました。'; // 何らかのエラーが発生した場合
             });
     </script>
 </body>
