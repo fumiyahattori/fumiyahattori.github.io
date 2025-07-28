@@ -24,34 +24,37 @@
     </style>
 </head>
 <body>
-    <div id="a1-value">Loading...</div>
+    <div id="a1-value"></div> 
 
     <script>
-        // ここにあなたのGoogle Sheets APIキーとスプレッドシートIDを入力してください
-        const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU'; // ここに取得したAPIキーを貼り付ける
-        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA'; // ここに取得したスプレッドシートIDを貼り付ける
+        const API_KEY = 'YOUR_API_KEY'; // ここに取得したAPIキーを貼り付ける
+        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // ここに取得したスプレッドシートIDを貼り付ける
         const RANGE = 'A1'; // A1セルの値を取得
 
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+        const a1ValueElement = document.getElementById('a1-value');
+        
+        const url = `https://sheets.googleapis.com/v4/sheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
         fetch(url)
             .then(response => {
                 if (!response.ok) {
+                    // HTTPエラー（例: 4xx, 5xx）が発生した場合もエラーとして処理
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
-                const a1ValueElement = document.getElementById('a1-value');
                 if (data.values && data.values.length > 0 && data.values[0].length > 0) {
-                    a1ValueElement.textContent = data.values[0][0]; // A1セルの値を取得
+                    a1ValueElement.textContent = data.values[0][0];
                 } else {
-                    a1ValueElement.textContent = 'A1セルに値がありません。';
+                    // A1セルに値がない場合もエラーとみなして「Coming Soon」にする
+                    a1ValueElement.textContent = 'Coming Soon';
                 }
             })
             .catch(error => {
                 console.error('データの取得に失敗しました:', error);
-                document.getElementById('a1-value').textContent = 'エラーが発生しました。';
+                // エラーが発生した場合に「Coming Soon」と表示
+                a1ValueElement.textContent = 'Coming Soon';
             });
     </script>
 </body>
