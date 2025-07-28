@@ -1,58 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Google スプレッドシート A1セル表示</title>
+    <title>Hello Page</title>
     <style>
         body {
-            font-family: sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
+            font-family: sans-serif;
+            font-size: 3em;
             color: #333;
-            font-size: 2em; /* 文字を大きく表示 */
-        }
-        #a1-value {
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <div id="a1-value">Loading...</div>
-
-    <script>
-        // ここにあなたのGoogle Sheets APIキーとスプレッドシートIDを入力してください
-        const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU'; // ここに取得したAPIキーを貼り付ける
-        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA'; // ここに取得したスプレッドシートIDを貼り付ける
-        const RANGE = 'A1'; // A1セルの値を取得
-
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const a1ValueElement = document.getElementById('a1-value');
-                if (data.values && data.values.length > 0 && data.values[0].length > 0) {
-                    a1ValueElement.textContent = data.values[0][0]; // A1セルの値を取得
-                } else {
-                    a1ValueElement.textContent = 'A1セルに値がありません。';
-                }
-            })
-            .catch(error => {
-                console.error('データの取得に失敗しました:', error);
-                document.getElementById('a1-value').textContent = 'エラーが発生しました。';
-            });
-    </script>
+    <p>こんにちは</p>
 </body>
 </html>
