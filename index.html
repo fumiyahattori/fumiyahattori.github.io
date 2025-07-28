@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Google スプレッドシート A1セル表示</title>
+    <title>動的 Google スプレッドシート値</title>
     <style>
         body {
             font-family: sans-serif;
@@ -12,7 +12,7 @@
             margin: 0;
             background-color: #f0f0f0;
             color: #333;
-            font-size: 2em; /* 文字を大きく表示 */
+            font-size: 2em;
         }
         #a1-value {
             padding: 20px;
@@ -27,35 +27,66 @@
     <div id="a1-value"></div> 
 
     <script>
-        // あなたのAPIキーとスプレッドシートIDをここに設定
+        // あなたのAPIキー（以前と同じものを使用）
         const API_KEY = 'AIzaSyDhA24yORHhHysahsikz77Pn83ZEDu_mEU';
-        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA';
-        const RANGE = 'A1'; // A1セルの値を取得
+        // あなたの「新しい共通スプレッドシート」のIDを設定
+        const SPREADSHEET_ID = '1o2Om4P4SwTqeLdmjb4_T-ZMQRwUn1Pt4Il7mcl38AnA'; 
+        // スプレッドシートの全データを取得する範囲（必要に応じて調整）
+        const RANGE = 'A:B'; // 例: A列からB列までを取得
+
+        // URLのクエリパラメータからCMSアイテムの識別子を取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const CMS_ITEM_IDENTIFIER = urlParams.get('itemId'); // Studioから'itemId'として渡される想定
 
         const a1ValueElement = document.getElementById('a1-value');
         
-        const url = `https://sheets.googleapis.com/v4/sheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+        // アイテム識別子が指定されていない場合のエラーハンドリング
+        if (!CMS_ITEM_IDENTIFIER) {
+            a1ValueElement.textContent = 'アイテム識別子が指定されていません。';
+            console.error('Error: CMS Item Identifier not provided in URL parameters.');
+            return;
+        }
+
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
         fetch(url)
             .then(response => {
                 if (!response.ok) {
-                    // HTTPエラー（例: 4xx, 5xx）が発生した場合もエラーとして処理
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
-                // データが取得できたら表示
-                if (data.values && data.values.length > 0 && data.values[0].length > 0) {
-                    a1ValueElement.textContent = data.values[0][0];
+                const rows = data.values;
+                // データがない場合（ヘッダー行しかない場合も含む）
+                if (!rows || rows.length <= 1) { // ヘッダー行のみの場合は「Coming Soon」
+                    a1ValueElement.textContent = 'Coming Soon';
+                    return;
+                }
+
+                // ヘッダー行から「CMS_ITEM_ID」と「DISPLAY_VALUE」の列インデックスを探す
+                const headerRow = rows[0];
+                const identifierColIndex = headerRow.findIndex(col => col.trim().toUpperCase() === 'CMS_ITEM_ID');
+                const displayValueColIndex = headerRow.findIndex(col => col.trim().toUpperCase() === 'DISPLAY_VALUE');
+
+                if (identifierColIndex === -1 || displayValueColIndex === -1) {
+                    a1ValueElement.textContent = 'スプレッドシートの列名が不正です。';
+                    console.error('Error: Required column names (CMS_ITEM_ID or DISPLAY_VALUE) not found.');
+                    return;
+                }
+
+                // CMS_ITEM_IDENTIFIERに一致する行を探す（ヘッダー行を除く）
+                const foundRow = rows.slice(1).find(row => row[identifierColIndex] === CMS_ITEM_IDENTIFIER);
+
+                if (foundRow && foundRow[displayValueColIndex] !== undefined) {
+                    a1ValueElement.textContent = foundRow[displayValueColIndex];
                 } else {
-                    // A1セルに値がない場合も「Coming Soon」にする
+                    // 該当するアイテムが見つからない場合
                     a1ValueElement.textContent = 'Coming Soon';
                 }
             })
             .catch(error => {
                 console.error('データの取得に失敗しました:', error);
-                // エラーが発生した場合に「Coming Soon」と表示
                 a1ValueElement.textContent = 'Coming Soon';
             });
     </script>
